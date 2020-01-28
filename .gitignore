@@ -1,0 +1,5 @@
+**__pycache__
+captions*.json
+instances*.json
+person_keypoints*.json
+annotations*.zip
