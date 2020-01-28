@@ -3,3 +3,4 @@ captions*.json
 instances*.json
 person_keypoints*.json
 annotations*.zip
+*.pth
