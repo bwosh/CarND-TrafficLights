@@ -101,7 +101,10 @@ def download_missing_images(output_folder, annotations):
 
     for file_name, url in missing:
         show_progress(count,1, all)
-        download(url, file_name)
+        try:
+            download(url, file_name)
+        except:
+            print("Issue with ", file_name)
         count+=1
         show_progress(count,1, all)
 

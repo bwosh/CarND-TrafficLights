@@ -21,13 +21,18 @@ The code uses CenterNet implementation presented in ["Objects as Points"](https:
 Used backbone model is DLA-34 proposed in ["Deep Layer Aggregation"](https://arxiv.org/pdf/1707.06484.pdf).
 
 # Current work status
-- [ ] prepare dataset download code
+Dataset:
+- [x] prepare dataset download code
+Detector:
 - [x] prepare detector backbone
 - [ ] add detector train code
 - [ ] add detector training tensorboard
+Classifier:
 - [ ] prepare annotations for red lights
-- [ ] add training of  classifier
+- [ ] add training of classifier
 - [ ] update requirements file
+E2E detector+classifier:
+- [ ] prepare demo inference code
 
 # Implementation details
 
