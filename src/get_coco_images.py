@@ -3,7 +3,7 @@ import os
 import shutil
 import zipfile
 
-from utils.download import download
+from utils.download import download, show_progress
 
 annotations_url='http://images.cocodataset.org/annotations/annotations_trainval2017.zip'
 
@@ -78,8 +78,8 @@ def get_missing_files_from_annotations(output_folder, ann_set):
     missing = []
     for imageId in ann_set:
         imageData = ann_set[imageId]
-        imageName= imageData['file_name']
-        imageUrl= imageData['url']
+        imageName = imageData['file_name']
+        imageUrl = imageData['url']
 
         target_location = os.path.join(output_folder, imageName)
 
@@ -95,7 +95,15 @@ def download_missing_images(output_folder, annotations):
     missing_train = get_missing_files_from_annotations(output_folder, train)
     missing_val = get_missing_files_from_annotations(output_folder, val)
 
-    print(len(missing_train), len(missing_val))
+    missing = missing_train + missing_val
+    count = 0
+    all = len(missing)
+
+    for file_name, url in missing:
+        show_progress(count,1, all)
+        download(url, file_name)
+        count+=1
+        show_progress(count,1, all)
 
 def generate_segmentation_images(output_folder, annotations):
     print("Creating segmentation images...")
