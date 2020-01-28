@@ -34,8 +34,8 @@ Used backbone model is DLA-34 proposed in ["Deep Layer Aggregation"](https://arx
 ## Implementation notes
 * Implementation uses PyTorch 1.0+ with CUDA 8+
 * Selected images from COCO dataset are used
-* Object detector is CenterNet (much code taken from [github.com/xingyizhou](https://github.com/xingyizhou/CenterNet]) )
-* Detector uses DLA-34 as backbone  (minified version of  code from [github.com/xingyizhou](https://github.com/xingyizhou/CenterNet/blob/master/src/lib/models/networks/dlav0.py])
+* Object detector is CenterNet (much code taken from [github.com/xingyizhou](https://github.com/xingyizhou/CenterNet) )
+* Detector uses DLA-34 as backbone  (minified version of  code from [github.com/xingyizhou](https://github.com/xingyizhou/CenterNet/blob/master/src/lib/models/networks/dlav0.py)
 
 # Install requirements
 
