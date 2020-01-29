@@ -103,10 +103,13 @@ def download_missing_images(output_folder, annotations):
     count = 0
     all = len(missing)
 
-    for file_name, url in missing:
+    for file_name, url in missing: 
         show_progress(count,1, all)
         try:
-            download(url, file_name)
+            temp_path = file_name+"_"
+            if not os.path.isfile(file_name):
+                download(url, temp_path)
+                shutil.move(temp_path, file_name)       
         except:
             print("Issue with ", file_name)
         count+=1
@@ -161,4 +164,5 @@ def download_data(output_folder, class_name):
     download_missing_images(output_folder, annotations)
     generate_segmentation_images(output_folder, annotations)
 
+# TODO: add args
 download_data('../data/coco','traffic light')

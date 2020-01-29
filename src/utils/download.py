@@ -1,17 +1,11 @@
 import urllib.request
 
 def show_progress(count, block_size, total_size):
-    if count == 0:
-        print("Downloading", end='')
-    else:
-       print("\b\b\b\b\b\b\b\b\b", end='')
     percent = (count*block_size)/total_size
     percent = 100*percent
-    if percent<100:
-        text = f"{percent:.2f}%"
-        while len(text)<9:
-            text = " " + text
-        print(text, end='')
+
+    text = f"{percent:.2f}%"
+    print(f"[{text}]", end='')
 
 def download(url, target_path, verbose=True):
     if verbose:
