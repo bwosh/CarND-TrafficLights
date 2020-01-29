@@ -30,9 +30,10 @@ Detector:
 Classifier:
 - [ ] prepare annotations for red lights
 - [ ] add training of classifier
-- [ ] update requirements file
 E2E detector+classifier:
 - [ ] prepare demo inference code
+Finalize:
+- [ ] update requirements file
 
 # Implementation details
 
@@ -71,9 +72,9 @@ python get_coco_images.py \
 
 ```bash
 cd src
-python get_coco_images.py \
-   --class "traffic lights" \
-   --output ../data/coco
+python train.py \
+   --input ../data/coco
+   --output ../models
 ```
 
 You can watch the training progress using tensorboard. (TODO)
