@@ -1,4 +1,6 @@
+import cv2
 import json
+import numpy as np
 import os
 import shutil
 import zipfile
@@ -58,6 +60,8 @@ def get_annotations_from_json(path, class_name):
         if image['id'] in imageData:
             imageData[image['id']]['url'] = image['coco_url']
             imageData[image['id']]['file_name'] = image['file_name']
+            imageData[image['id']]['height'] = image['height']
+            imageData[image['id']]['width'] = image['width']
 
     return imageData
 
@@ -108,8 +112,47 @@ def download_missing_images(output_folder, annotations):
         count+=1
         show_progress(count,1, all)
 
+def apply_segc(img_orig, h, w, s, color_val):
+    img = np.zeros((h,w), dtype='uint8')
+    img = img.reshape(-1)
+    steps = np.array(s[1:]).reshape(-1,2)
+    offset=s[0]
+    for on,off in steps:
+        img[offset:offset+on] = color_val
+        offset += on+off
+    
+    img = img.reshape(w,h).transpose(1,0)
+    return np.maximum(img_orig,np.repeat(np.expand_dims(img,axis=2),3,axis=2))
+
+def generate_segmentation_image(target_path, height, width, segmentation_data):
+    target_path = ".".join(target_path.split('.')[:-1])+"_seg.png"
+    img = np.zeros((height, width,3), dtype='uint8')
+    color = 255
+    for seg_idx, seg in enumerate(segmentation_data):
+        if 'counts' in seg:
+            segc = seg['counts']
+            img = apply_segc(img, height, width, segc, color )
+        else:
+            for s in seg:
+                s = np.array(s).reshape(1,-1,2).astype(int)
+                cv2.fillPoly(img,s, (color,color,color))
+
+        color -= 1
+        if color<=1:
+            raise Exception("Too many instances to distinguish in 255 values of gray.")
+    cv2.imwrite(target_path, img)
+
 def generate_segmentation_images(output_folder, annotations):
     print("Creating segmentation images...")
+    train, val = annotations
+    all = {**train, **val}
+    for imageId in all:
+        image = all[imageId]
+        file_name = image['file_name']
+        height = image['height']
+        width = image['width']
+        segmentation_data = image['annotations']
+        generate_segmentation_image(os.path.join(output_folder, file_name), height, width, segmentation_data)
 
 def download_data(output_folder, class_name):
     download_annotations(output_folder)
