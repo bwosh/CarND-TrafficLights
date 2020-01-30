@@ -63,7 +63,7 @@ class SingleClassDataset(Dataset):
         instance_ids = [i for i in set(list(mask.ravel())) if i != 0]
 
         heatmap = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
-
+        wh = np.zeros((self.output_shape[1], self.output_shape[0], 2), dtype=float)
         bboxes = []
         for instance_id in instance_ids:
 
@@ -78,33 +78,37 @@ class SingleClassDataset(Dataset):
             cx = xmin + width//2
             cy = ymin + height//2
 
+            # Heatmap
             radius = gaussian_radius((width, height))
-
             temp = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
             temp[cy,cx] = 1
             temp = gaussian_filter(temp, radius)
             temp = temp/np.max(temp)
             heatmap = np.maximum(heatmap, temp)
-        return heatmap, mask
+        
+            # Width & Height
+            wh[cy,cx,0] = width/self.output_shape[0]
+            wh[cy,cx,1] = height/self.output_shape[1]
+
+        return heatmap, wh
 
     def __getitem__(self,index):
-        img, mask = self.get_unchanged(index) 
-
         if self.augment:
-            img, mask = self.get_augmented(img,mask)
+            img, mask = self.get_augmented(index)
         else:
-            img, mask = self.get_unchanged(img,mask)
+            img, mask = self.get_unchanged(index)
 
         center_heatmap, widthandheight = self.to_heatmap_widthandheight(mask)
 
         # To proper tensors
         img = torch.tensor(img.transpose(2,0,1), dtype=torch.float)/255
-        mask = torch.tensor(mask[:,:,:1].transpose(2,0,1), dtype=torch.float)
-        mask = mask/mask.max()
+        center_heatmap = torch.tensor(np.expand_dims(center_heatmap,axis=0), dtype=torch.float)
+        widthandheight = torch.tensor(widthandheight.transpose(2,0,1), dtype=torch.float)
 
-        return img, mask
+        return img, center_heatmap, widthandheight
 
 #-----------------------
+# TODO: remove below
 def check_stability():
     annotations = extract_class_annotations('../data/coco', 'traffic light')
     ta, va = annotations
@@ -112,8 +116,6 @@ def check_stability():
     dataset = SingleClassDataset(ann, '../data/coco', 256, 256, (64,64), augment=True)
 
     repeats = 1
-    print(f"There are {len(dataset)} items.")
-    print(f"Testing augmentation stability for {repeats} cycles:")
     from tqdm import tqdm
     for r in range(repeats):
         count = 0
@@ -121,14 +123,26 @@ def check_stability():
             if count> -1:
                 img, mask = dataset.get_augmented(i)
                 hm, wh = dataset.to_heatmap_widthandheight(mask)
+                e2e = dataset.__getitem__(i)
+                a,b,c = e2e
+                if i==0:
+                    print(a.shape, b.shape, c.shape)
                 mx = 1
                 if np.max(hm) > 0:
                     mx = np.max(hm)
                 hm = (hm/mx*255).astype('uint8')
+                for x in range(hm.shape[1]):
+                    for y in range(hm.shape[0]):
+                        if wh[y,x,0]>0 or wh[y,x,0]>1:
+                            w = int(wh[y,x,0] * hm.shape[1])
+                            h = int(wh[y,x,1] * hm.shape[0])
+
+                            cv2.line(hm,(x-w//2,y),(x+w//2,y),(255,255,255))
+                            cv2.line(hm,(x,y-h//2),(x,y+h//2),(255,255,255))
 
                 cv2.imwrite(f"../temp/img_R{r}_{count}.png", img)
                 cv2.imwrite(f"../temp/img_R{r}_{count}_mask.png", mask)
                 cv2.imwrite(f"../temp/img_R{r}_{count}_heatmap.png", hm)
             count += 1
 
-check_stability()
+#check_stability()
