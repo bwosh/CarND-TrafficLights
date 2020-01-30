@@ -23,6 +23,7 @@ Used backbone model is DLA-34 proposed in ["Deep Layer Aggregation"](https://arx
 # Current work status
 Dataset:
 - [x] prepare dataset download code
+- [x] prepare center heatmap and sized tensor dataset object
 Detector:
 - [x] prepare detector backbone
 - [ ] add detector train code
