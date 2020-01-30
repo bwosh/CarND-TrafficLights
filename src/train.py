@@ -16,6 +16,10 @@ args = get_args()
 
 # Network model preparation
 model = get_pose_net(34, heads={'hm': 1, 'wh': 2}, head_conv=-1).cuda()
+if (args.restore !=""):
+    print(f"Loading model from {args.restore}")
+    state_dict = torch.load(args.restore)
+    model.load_state_dict(state_dict)
 
 # Datasets
 annot_train, annot_val = extract_class_annotations(args.input, args.class_name)
@@ -40,7 +44,8 @@ for epoch in range(args.epochs):
     print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
     model.train()
     tracker = ResultTracker()
-    for batch in tqdm(train_loader, leave=False):
+    loader = tqdm(train_loader, leave=False)
+    for batch in loader:
         input, heatmaps, widhtandheight = batch
         input, heatmaps, widhtandheight = input.cuda(), heatmaps.cuda(), widhtandheight.cuda()
 
@@ -51,6 +56,7 @@ for epoch in range(args.epochs):
 
         loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
         tracker.add_loss_stats(loss_stats)
+        loader.desc = tracker.get_running_loss_text()
 
         loss.backward()
         optimizer.step()
@@ -60,7 +66,8 @@ for epoch in range(args.epochs):
     model.eval()
     tracker = ResultTracker()
     with torch.no_grad():
-        for batch in tqdm(val_loader, leave=False):
+        loader = tqdm(val_loader, leave=False)
+        for batch in loader:
             input, heatmaps, widhtandheight = batch
             input, heatmaps, widhtandheight = input.cuda(), heatmaps.cuda(), widhtandheight.cuda()
 
@@ -70,7 +77,9 @@ for epoch in range(args.epochs):
 
             loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
             tracker.add_loss_stats(loss_stats)
+            loader.desc = tracker.get_running_loss_text()
     tracker.print_avg_loss_stats()
+    print()
 
     # TODO LOSS, trainer, validation(mAP iou mAP@class AP 50 75 s m l)
     # TODO readme: carla, pytorch->quantization->onnx->tf 1.4
