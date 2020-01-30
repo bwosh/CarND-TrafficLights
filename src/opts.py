@@ -9,16 +9,13 @@ def get_args():
 
     parser.add_argument("--input_size", type=int, default=256)
     parser.add_argument("--output_size", type=float, default=64)
-    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--num_workers", type=int, default=8)
 
     parser.add_argument("--lr", type=float, default=5e-04)
     parser.add_argument("--epochs", type=int, default=140)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--lr_epochs", type=str, default="90,120") # TODO implement
     parser.add_argument("--lr_gamma", type=float, default=0.1) # TODO implement
-
-
-
 
     args = parser.parse_args()
     return args
