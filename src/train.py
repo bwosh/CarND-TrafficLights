@@ -2,12 +2,15 @@ import os
 import torch
 
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from dataset import SingleClassDataset
 from get_coco_images import extract_class_annotations
+from loss import CenterNetLoss
 from models.dla import get_pose_net
 from opts import get_args
-from tqdm import tqdm
+from utils.result import ResultTracker
+
 
 args = get_args()
 
@@ -31,21 +34,31 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 
 # Training
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+criterion = CenterNetLoss(args)
 
 for epoch in range(args.epochs):
     print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
     model.train()
+    tracker = ResultTracker()
     for batch in tqdm(train_loader, leave=False):
         input, heatmaps, widhtandheight = batch
         input, heatmaps, widhtandheight = input.cuda(), heatmaps.cuda(), widhtandheight.cuda()
 
+        optimizer.zero_grad()
         output = model(input)
         output_hm = output[0]['hm']
         output_wh = output[0]['wh']
-        #print(input.shape, heatmaps.shape, widhtandheight.shape, output_hm.shape, output_wh.shape)
+
+        loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
+        tracker.add_loss_stats(loss_stats)
+
+        loss.backward()
+        optimizer.step()
+    tracker.print_avg_loss_stats()
 
     print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
     model.eval()
+    tracker = ResultTracker()
     with torch.no_grad():
         for batch in tqdm(val_loader, leave=False):
             input, heatmaps, widhtandheight = batch
@@ -54,7 +67,10 @@ for epoch in range(args.epochs):
             output = model(input)
             output_hm = output[0]['hm']
             output_wh = output[0]['wh']
-            #print(input.shape, heatmaps.shape, widhtandheight.shape, output_hm.shape, output_wh.shape)
+
+            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
+            tracker.add_loss_stats(loss_stats)
+    tracker.print_avg_loss_stats()
 
     # TODO LOSS, trainer, validation(mAP iou mAP@class AP 50 75 s m l)
     # TODO readme: carla, pytorch->quantization->onnx->tf 1.4
