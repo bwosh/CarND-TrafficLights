@@ -46,8 +46,8 @@ for epoch in range(args.epochs):
     tracker = ResultTracker()
     loader = tqdm(train_loader, leave=False)
     for batch in loader:
-        input, heatmaps, widhtandheight = batch
-        input, heatmaps, widhtandheight = input.cuda(), heatmaps.cuda(), widhtandheight.cuda()
+        input, heatmaps, widhtandheight, reg_mask, ind = batch
+        input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
 
         optimizer.zero_grad()
         output = model(input)
@@ -68,8 +68,8 @@ for epoch in range(args.epochs):
     with torch.no_grad():
         loader = tqdm(val_loader, leave=False)
         for batch in loader:
-            input, heatmaps, widhtandheight = batch
-            input, heatmaps, widhtandheight = input.cuda(), heatmaps.cuda(), widhtandheight.cuda()
+            input, heatmaps, widhtandheight, reg_mask, ind = batch
+            input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
 
             output = model(input)
             output_hm = output[0]['hm']

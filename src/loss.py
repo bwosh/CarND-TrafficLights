@@ -4,15 +4,16 @@ class CenterNetLoss(torch.nn.Module):
     def __init__(self, opt):
         super(CenterNetLoss, self).__init__()
         self.opt = opt
-
-        self.dummy = torch.nn.MSELoss()
+        self.crit = torch.nn.MSELoss()#FocalLoss()
+        self.crit_reg = torch.nn.MSELoss()#RegL1Loss()
 
     def forward(self, in_hm, out_hm, in_wh, out_wh):
         hm_loss, wh_loss = 0, 0
 
-        # TODO dummy
-        hm_loss = self.dummy(in_hm, out_hm) 
-        wh_loss = self.dummy(in_wh, out_wh)
+        #TODO out_hm = sigmoid(out_hm)
+
+        hm_loss = self.crit(in_hm, out_hm) 
+        wh_loss = 0#self.crit_reg(out_wh, batch['reg_mask'], batch['ind'])
 
         loss = self.opt.hm_weight * hm_loss + self.opt.wh_weight * wh_loss
         

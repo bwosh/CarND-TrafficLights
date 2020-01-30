@@ -14,7 +14,9 @@ from utils.image import gaussian_radius
 class SingleClassDataset(Dataset):
     def __init__(self, annotations, images_path, width, height, output_shape, augment=False):
         self.annotations = annotations
+
         self.annotation_keys = list(self.annotations.keys())
+        self.max_objs = max([len(annotations[k]['annotations']) for k in annotations])
         self.images_path = images_path
         self.width = width
         self.height = height
@@ -60,6 +62,9 @@ class SingleClassDataset(Dataset):
         return img, mask
 
     def to_heatmap_widthandheight(self, mask):
+        reg_mask = np.zeros((self.max_objs), dtype=np.uint8)
+        ind = np.zeros((self.max_objs), dtype=np.int64)
+
         instance_ids = [i for i in set(list(mask.ravel())) if i != 0]
 
         heatmap = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
@@ -90,7 +95,7 @@ class SingleClassDataset(Dataset):
             wh[cy,cx,0] = width/self.output_shape[0]
             wh[cy,cx,1] = height/self.output_shape[1]
 
-        return heatmap, wh
+        return heatmap, wh, reg_mask, ind
 
     def __getitem__(self,index):
         if self.augment:
@@ -98,14 +103,14 @@ class SingleClassDataset(Dataset):
         else:
             img, mask = self.get_unchanged(index)
 
-        center_heatmap, widthandheight = self.to_heatmap_widthandheight(mask)
+        center_heatmap, widthandheight, reg_mask, ind = self.to_heatmap_widthandheight(mask)
 
         # To proper tensors
         img = torch.tensor(img.transpose(2,0,1), dtype=torch.float)/255
         center_heatmap = torch.tensor(np.expand_dims(center_heatmap,axis=0), dtype=torch.float)
         widthandheight = torch.tensor(widthandheight.transpose(2,0,1), dtype=torch.float)
 
-        return img, center_heatmap, widthandheight
+        return img, center_heatmap, widthandheight, reg_mask, ind
 
 #-----------------------
 # TODO: remove below
