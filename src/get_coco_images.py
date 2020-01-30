@@ -48,17 +48,25 @@ def get_annotations_from_json(path, class_name):
         raise Exception(f"ERROR: Category {class_name} not found!")
 
     imageData = {}
+
+    skipped_image_ids = []
+
     for annotations in data['annotations']:
         if annotations['category_id'] == categoryId:
             segmentation = annotations['segmentation']
             image_id = annotations['image_id']
+
+            if any(['counts' in s for s in segmentation]):
+                skipped_image_ids.append(image_id)
+                continue
+
             if image_id in imageData:
                 imageData[image_id]['annotations'].append(segmentation)
             else:
                 imageData[image_id] = {'annotations':[segmentation]}
 
     for image in data['images']:
-        if image['id'] in imageData:
+        if image['id'] in imageData and not image['id'] in skipped_image_ids:
             imageData[image['id']]['url'] = image['coco_url']
             imageData[image['id']]['file_name'] = image['file_name']
             imageData[image['id']]['height'] = image['height']
@@ -166,4 +174,4 @@ def download_data(output_folder, class_name):
     generate_segmentation_images(output_folder, annotations)
 
 # TODO: add args
-download_data('../data/coco','traffic light')
+#download_data('../data/coco','traffic light')
