@@ -65,7 +65,7 @@ pip install -r requirements.txt
 ```bash
 cd src
 python get_coco_images.py \
-   --class "traffic lights" \
+   --class_name "traffic light" \
    --output ../data/coco
 ```
 

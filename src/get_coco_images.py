@@ -177,5 +177,10 @@ def download_data(output_folder, class_name):
     download_missing_images(output_folder, annotations)
     generate_segmentation_images(output_folder, annotations)
 
-# TODO: add args
-#download_data('../data/coco','traffic light')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", required=True, type=str)
+    parser.add_argument("--class_name", required=True, type=str)
+    args = parser.parse_args()
+
+    download_data(args.output, args.class_name)
