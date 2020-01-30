@@ -66,11 +66,15 @@ def get_annotations_from_json(path, class_name):
                 imageData[image_id] = {'annotations':[segmentation]}
 
     for image in data['images']:
-        if image['id'] in imageData and not image['id'] in skipped_image_ids:
+        if image['id'] in imageData:
             imageData[image['id']]['url'] = image['coco_url']
             imageData[image['id']]['file_name'] = image['file_name']
             imageData[image['id']]['height'] = image['height']
             imageData[image['id']]['width'] = image['width']
+
+    for id in skipped_image_ids:
+        if id in imageData:
+            del imageData[id]
 
     return imageData
 
