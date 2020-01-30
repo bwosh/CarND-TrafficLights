@@ -70,7 +70,7 @@ class SingleClassDataset(Dataset):
         heatmap = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
         wh = np.zeros((self.output_shape[1], self.output_shape[0], 2), dtype=float)
         bboxes = []
-        for instance_id in instance_ids:
+        for idx,instance_id in enumerate(instance_ids):
 
             y_coords, x_coords = np.where(mask[:,:,0]==instance_id)
             xmin = min(x_coords)
@@ -82,6 +82,9 @@ class SingleClassDataset(Dataset):
 
             cx = xmin + width//2
             cy = ymin + height//2
+
+            ind[idx] = cy*self.output_shape[1]+cx
+            reg_mask[idx] = 1
 
             # Heatmap
             radius = gaussian_radius((width, height))

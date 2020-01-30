@@ -54,7 +54,7 @@ for epoch in range(args.epochs):
         output_hm = output[0]['hm']
         output_wh = output[0]['wh']
 
-        loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
+        loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
         tracker.add_loss_stats(loss_stats)
         loader.desc = tracker.get_running_loss_text()
 
@@ -75,7 +75,7 @@ for epoch in range(args.epochs):
             output_hm = output[0]['hm']
             output_wh = output[0]['wh']
 
-            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh)
+            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
             tracker.add_loss_stats(loss_stats)
             loader.desc = tracker.get_running_loss_text()
     tracker.print_avg_loss_stats()
