@@ -68,7 +68,8 @@ class SingleClassDataset(Dataset):
         instance_ids = [i for i in set(list(mask.ravel())) if i != 0]
 
         heatmap = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
-        wh = np.zeros((self.output_shape[1], self.output_shape[0], 2), dtype=float)
+        wh = np.zeros((self.max_objs, 2), dtype=np.float32)
+        #TODO wh = np.zeros((self.output_shape[1], self.output_shape[0], 2), dtype=float)
         bboxes = []
         for idx,instance_id in enumerate(instance_ids):
 
@@ -95,8 +96,9 @@ class SingleClassDataset(Dataset):
             heatmap = np.maximum(heatmap, temp)
         
             # Width & Height
-            wh[cy,cx,0] = width/self.output_shape[0]
-            wh[cy,cx,1] = height/self.output_shape[1]
+            # TODO wh[cy,cx,0] = width/self.output_shape[0]
+            #wh[cy,cx,1] = height/self.output_shape[1]
+            wh[idx] = 1. * width, 1. * height
 
         return heatmap, wh, reg_mask, ind
 
@@ -111,7 +113,7 @@ class SingleClassDataset(Dataset):
         # To proper tensors
         img = torch.tensor(img.transpose(2,0,1), dtype=torch.float)/255
         center_heatmap = torch.tensor(np.expand_dims(center_heatmap,axis=0), dtype=torch.float)
-        widthandheight = torch.tensor(widthandheight.transpose(2,0,1), dtype=torch.float)
+        #TODO widthandheight = torch.tensor(widthandheight.transpose(2,0,1), dtype=torch.float)
 
         return img, center_heatmap, widthandheight, reg_mask, ind
 
