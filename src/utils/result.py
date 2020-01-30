@@ -17,6 +17,6 @@ class ResultTracker:
     def print_avg_loss_stats(self):
         for k in self.loss:
             avg = np.mean(self.loss[k])
-            print(f"{k}:{avg} ", end='')
+            print(f"{k}:{avg:.5f} ", end='')
         print()
     
