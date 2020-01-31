@@ -90,9 +90,8 @@ for epoch in range(args.epochs):
     tracker.print_avg_loss_stats()
     tracker.print_IoU_mAP_stats()
     print()
-
-    # TODO LOSS, trainer, validation(mAP iou mAP@class AP 50 75 s m l)
-    # TODO readme: carla, pytorch->quantization->onnx->tf 1.4
+    if not args.val:
+        torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
 
 if not args.val:
     torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))

@@ -26,7 +26,7 @@ Dataset:
 - [x] prepare center heatmap and sized tensor dataset object
 Detector:
 - [x] prepare detector backbone
-- [ ] add detector train code
+- [x] add detector train code
 - [ ] add detector training tensorboard
 Classifier:
 - [ ] prepare annotations for red lights

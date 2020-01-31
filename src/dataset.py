@@ -69,7 +69,6 @@ class SingleClassDataset(Dataset):
 
         heatmap = np.zeros((self.output_shape[1], self.output_shape[0]), dtype=float)
         wh = np.zeros((self.max_objs, 2), dtype=np.float32)
-        #TODO wh = np.zeros((self.output_shape[1], self.output_shape[0], 2), dtype=float)
         bboxes = []
         for idx,instance_id in enumerate(instance_ids):
 
@@ -96,8 +95,6 @@ class SingleClassDataset(Dataset):
             heatmap = np.maximum(heatmap, temp)
         
             # Width & Height
-            # TODO wh[cy,cx,0] = width/self.output_shape[0]
-            #wh[cy,cx,1] = height/self.output_shape[1]
             wh[idx] = 1. * width, 1. * height
 
         return heatmap, wh, reg_mask, ind
@@ -113,46 +110,5 @@ class SingleClassDataset(Dataset):
         # To proper tensors
         img = torch.tensor(img.transpose(2,0,1), dtype=torch.float)/255
         center_heatmap = torch.tensor(np.expand_dims(center_heatmap,axis=0), dtype=torch.float)
-        #TODO widthandheight = torch.tensor(widthandheight.transpose(2,0,1), dtype=torch.float)
 
         return img, center_heatmap, widthandheight, reg_mask, ind
-
-#-----------------------
-# TODO: remove below
-def check_stability():
-    annotations = extract_class_annotations('../data/coco', 'traffic light')
-    ta, va = annotations
-    ann = {**ta, **va}
-    dataset = SingleClassDataset(ann, '../data/coco', 256, 256, (64,64), augment=True)
-
-    repeats = 1
-    from tqdm import tqdm
-    for r in range(repeats):
-        count = 0
-        for i in tqdm(range(len(dataset)), desc = f"Iter{r+1}/{repeats}"):
-            if count> -1:
-                img, mask = dataset.get_augmented(i)
-                hm, wh = dataset.to_heatmap_widthandheight(mask)
-                e2e = dataset.__getitem__(i)
-                a,b,c = e2e
-                if i==0:
-                    print(a.shape, b.shape, c.shape)
-                mx = 1
-                if np.max(hm) > 0:
-                    mx = np.max(hm)
-                hm = (hm/mx*255).astype('uint8')
-                for x in range(hm.shape[1]):
-                    for y in range(hm.shape[0]):
-                        if wh[y,x,0]>0 or wh[y,x,0]>1:
-                            w = int(wh[y,x,0] * hm.shape[1])
-                            h = int(wh[y,x,1] * hm.shape[0])
-
-                            cv2.line(hm,(x-w//2,y),(x+w//2,y),(255,255,255))
-                            cv2.line(hm,(x,y-h//2),(x,y+h//2),(255,255,255))
-
-                cv2.imwrite(f"../temp/img_R{r}_{count}.png", img)
-                cv2.imwrite(f"../temp/img_R{r}_{count}_mask.png", mask)
-                cv2.imwrite(f"../temp/img_R{r}_{count}_heatmap.png", hm)
-            count += 1
-
-#check_stability()
