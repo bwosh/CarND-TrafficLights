@@ -8,6 +8,7 @@ def get_args():
     parser.add_argument("--class_name", type=str, default="traffic light")
     parser.add_argument("--restore", type=str, default="")
     parser.add_argument("--val", action="store_true")
+    parser.add_argument("--debug", action="store_true")
 
     parser.add_argument("--input_size", type=int, default=256)
     parser.add_argument("--output_size", type=float, default=64)

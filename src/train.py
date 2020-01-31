@@ -49,7 +49,7 @@ for epoch in range(args.epochs):
     else:
         print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
         model.train()
-        tracker = ResultTracker()
+        tracker = ResultTracker(args)
         loader = tqdm(train_loader, leave=False)
         for batch in loader:
             input, heatmaps, widhtandheight, reg_mask, ind = batch
@@ -72,7 +72,7 @@ for epoch in range(args.epochs):
 
     print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
     model.eval()
-    tracker = ResultTracker()
+    tracker = ResultTracker(args)
     with torch.no_grad():
         loader = tqdm(val_loader, leave=False)
         for batch in loader:

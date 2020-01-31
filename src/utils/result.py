@@ -3,7 +3,8 @@ import numpy as np
 from utils.metrics import Metrics
 
 class ResultTracker:
-    def __init__(self):
+    def __init__(self, opts):
+        self.opts = opts
         self.reset()
 
     def reset(self):
@@ -19,7 +20,7 @@ class ResultTracker:
                 self.loss[k] = [float(loss_stats[k])] 
 
     def save_IoU_mAP(self, in_hm, out_hm, in_wh, out_wh, reg_mask, ind):
-        metrics = Metrics(in_hm, out_hm, in_wh, out_wh, reg_mask, ind)
+        metrics = Metrics(in_hm, out_hm, in_wh, out_wh, reg_mask, ind, debug=self.opts.debug)
 
         self.aps += metrics.calculate_APs()
         self.ious += metrics.calculate_IoUs()
