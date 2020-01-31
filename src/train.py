@@ -90,4 +90,5 @@ for epoch in range(args.epochs):
     # TODO LOSS, trainer, validation(mAP iou mAP@class AP 50 75 s m l)
     # TODO readme: carla, pytorch->quantization->onnx->tf 1.4
 
-torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))
+if not args.val:
+    torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))

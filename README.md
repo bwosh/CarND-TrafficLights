@@ -74,8 +74,8 @@ python get_coco_images.py \
 ```bash
 cd src
 python train.py \
-   --input ../data/coco
-   --output ../models
+   --input ../data/coco \
+   --output ../models \
 ```
 
 You can watch the training progress using tensorboard. (TODO)
@@ -89,7 +89,19 @@ If you haven't trained model yourself you can download pretrained model and use 
 * Download model from (TODO)
 * Place pth file in **./model** folder
 
-### 2. Run demo script on folder with images
+### 2. (optional) Check result on validation dataset
+
+NOTICE: *The dataset must be downloaded berore this step.*
+
+```bash
+cd src
+python train.py \
+   --input ../data/coco \
+   --output ../models \
+   --val
+```
+
+### 3. Run demo script on folder with images
 
 ```bash
 cd src
