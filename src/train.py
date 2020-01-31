@@ -40,27 +40,33 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 criterion = CenterNetLoss(args)
 
+if args.val:
+    args.epochs = 1
+
 for epoch in range(args.epochs):
-    print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
-    model.train()
-    tracker = ResultTracker()
-    loader = tqdm(train_loader, leave=False)
-    for batch in loader:
-        input, heatmaps, widhtandheight, reg_mask, ind = batch
-        input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
+    if args.val:
+        print("ONLY VALIDATION MODE SELECTED.")
+    else:
+        print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
+        model.train()
+        tracker = ResultTracker()
+        loader = tqdm(train_loader, leave=False)
+        for batch in loader:
+            input, heatmaps, widhtandheight, reg_mask, ind = batch
+            input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
 
-        optimizer.zero_grad()
-        output = model(input)
-        output_hm = output[0]['hm']
-        output_wh = output[0]['wh']
+            optimizer.zero_grad()
+            output = model(input)
+            output_hm = output[0]['hm']
+            output_wh = output[0]['wh']
 
-        loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
-        tracker.add_loss_stats(loss_stats)
-        loader.desc = tracker.get_running_loss_text()
+            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
+            tracker.add_loss_stats(loss_stats)
+            loader.desc = tracker.get_running_loss_text()
 
-        loss.backward()
-        optimizer.step()
-    tracker.print_avg_loss_stats()
+            loss.backward()
+            optimizer.step()
+        tracker.print_avg_loss_stats()
 
     print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
     model.eval()
