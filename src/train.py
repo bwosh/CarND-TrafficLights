@@ -62,7 +62,7 @@ for epoch in range(args.epochs):
 
             loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
             tracker.add_loss_stats(loss_stats)
-            tracker.save_IoU_mAP(heatmaps, output_hm, widhtandheight, output_wh)
+            tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
             loader.desc = tracker.get_running_loss_text()
 
             loss.backward()
@@ -85,7 +85,7 @@ for epoch in range(args.epochs):
 
             loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
             tracker.add_loss_stats(loss_stats)
-            tracker.save_IoU_mAP(heatmaps, output_hm, widhtandheight, output_wh)
+            tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
             loader.desc = tracker.get_running_loss_text()
     tracker.print_avg_loss_stats()
     tracker.print_IoU_mAP_stats()
