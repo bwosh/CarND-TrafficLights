@@ -27,10 +27,10 @@ class SingleClassDataset(Dataset):
 
         self.aug_set=a.Compose([
             a.HorizontalFlip(p=0.5),
-            a.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.1, rotate_limit=10,p=0.5),
+            a.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=15,p=0.5),
             a.RandomBrightness(0.25,p=0.5),
             a.RandomContrast(0.25,p=0.5)
-        ],p=0.7)
+        ],p=0.9)
 
     def __len__(self):
         return len(self.annotations)
