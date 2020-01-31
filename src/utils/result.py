@@ -19,8 +19,8 @@ class ResultTracker:
             else:
                 self.loss[k] = [float(loss_stats[k])] 
 
-    def save_IoU_mAP(self, in_hm, out_hm, in_wh, out_wh, reg_mask, ind):
-        metrics = Metrics(in_hm, out_hm, in_wh, out_wh, reg_mask, ind, debug=self.opts.debug)
+    def save_IoU_mAP(self, in_hm, out_hm, in_wh, out_wh):
+        metrics = Metrics(in_hm, out_hm, in_wh, out_wh, self.opts)
 
         self.aps += metrics.calculate_APs()
         self.ious += metrics.calculate_IoUs()

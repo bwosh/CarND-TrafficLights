@@ -75,3 +75,18 @@ def ctdet_decode(heat, wh, reg=None, cat_spec_wh=False, K=100):
     detections = torch.cat([bboxes, scores, clses], dim=2)
       
     return detections
+
+def decode_results(hm,wh,k):
+  dets = ctdet_decode(hm, wh, K=k)
+  dets = dets.detach().cpu().numpy()
+
+  result = []
+
+  for idx in range(dets.shape[0]):
+    det = dets[idx]
+    result.append(
+      {
+        'bboxes' : det[:,:4],
+        'scores' : det[:,4]
+      })
+  return result

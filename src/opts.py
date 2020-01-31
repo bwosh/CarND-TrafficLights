@@ -8,7 +8,7 @@ def get_args():
     parser.add_argument("--class_name", type=str, default="traffic light")
     parser.add_argument("--restore", type=str, default="")
     parser.add_argument("--val", action="store_true")
-    parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--debug", action="store_true") # TODo remove in the end
 
     parser.add_argument("--input_size", type=int, default=256)
     parser.add_argument("--output_size", type=float, default=64)
@@ -22,6 +22,9 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--lr_epochs", type=str, default="90,120") # TODO implement
     parser.add_argument("--lr_gamma", type=float, default=0.1) # TODO implement
+
+    parser.add_argument("--K", type=int, default=8)
+    parser.add_argument("--vis_thresh", type=float, default=0.2)
 
     args = parser.parse_args()
     return args
