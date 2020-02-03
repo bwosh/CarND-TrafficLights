@@ -112,7 +112,7 @@ with SummaryWriter() as writer:
 
         val_loss = tracker.print_avg_loss_stats()
         miou, map = tracker.print_IoU_mAP_stats()
-        writer.add_scalar('Val/mAP', map, nitepocher)
+        writer.add_scalar('Val/mAP', map, epoch)
         writer.add_scalar('Val/mIoU', miou, epoch)
         writer.add_scalar('Val/Loss', float(val_loss), epoch)
 
