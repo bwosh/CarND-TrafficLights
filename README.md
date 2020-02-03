@@ -5,7 +5,7 @@ The main purpose of this project is to address Red Litht Detection sub-project o
 
 ![CARLA car](assets/carla.jpg)
 
-Sample detector result:
+Sample detector result:  
 ![detector result](assets/detector.jpg)
 
 # Project desctiption
