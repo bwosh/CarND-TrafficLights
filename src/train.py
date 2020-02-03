@@ -1,6 +1,5 @@
 import os
 import torch
-import torch.quantization as quantization
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -21,6 +20,7 @@ if (args.restore !=""):
     print(f"Loading model from {args.restore}")
     state_dict = torch.load(args.restore)
     model.load_state_dict(state_dict)
+model.eval()
 
 # Datasets
 annot_train, annot_val = extract_class_annotations(args.input, args.class_name)
@@ -70,14 +70,12 @@ for epoch in range(args.epochs):
 
             loss.backward()
             optimizer.step()
+            break
         tracker.print_avg_loss_stats()
         tracker.print_IoU_mAP_stats()
 
     print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
     model.eval()
-    if args.quantize:
-        model.qconfig = quantization.get_default_qat_qconfig()
-        model = torch.quantization.prepare_qat(model, inplace=True)
 
     tracker = ResultTracker(args)
     with torch.no_grad():
@@ -97,16 +95,11 @@ for epoch in range(args.epochs):
     tracker.print_avg_loss_stats()
     tracker.print_IoU_mAP_stats()
     print()
+    
     if not args.val:
-        save_model = model
-        if args.quantize:
-            save_model = quantization.convert(model)
-        torch.save(save_model.state_dict(),os.path.join(args.output, "last.pth"))
+        torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
 
         # TODO save best
 
 if not args.val:
-    save_model = model
-    if args.quantize:
-        save_model = quantization.convert(model)
-    torch.save(save_model.state_dict(),os.path.join(args.output, "final_model.pth"))
+    torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))
