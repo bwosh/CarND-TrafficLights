@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 def _gather_feat(feat, ind, mask=None):
     dim  = feat.size(2)
     ind  = ind.unsqueeze(2).expand(ind.size(0), ind.size(1), dim)
