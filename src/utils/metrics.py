@@ -30,7 +30,7 @@ class Metrics():
 
                 x1 = cx-width//2
                 y1 = cy-height//2
-                x2 = x1+width+1 # TODO +1/-1 ?
+                x2 = x1+width+1
                 y2 = y1+height+1
 
                 result[y1:y2,x1:x2] = 1

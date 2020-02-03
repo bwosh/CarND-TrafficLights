@@ -33,6 +33,7 @@ class ResultTracker:
             avg = np.mean(self.loss[k])
             print(f"{k}:{avg:.5f} ", end='')
         print()
+        return np.mean(self.loss['loss'])
 
     def get_running_loss_text(self):
         return f"{np.mean(self.loss['loss']):0.5f}"

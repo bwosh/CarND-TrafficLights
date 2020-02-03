@@ -41,9 +41,16 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 criterion = CenterNetLoss(args)
 lr_updater = LrUpdater(args.lr, optimizer, args.lr_epochs, args.lr_gammas)
+best = 1000
+best_model_path = os.path.join(args.output, "best.pth")
+if os.path.isfile(best_model_path):
+    data = torch.load(best_model_path)
+    best=data['val_loss']
+    print(f"Found best model with val_loss={best:.5f}")
 
 if args.val:
     args.epochs = 1
+
 
 for epoch in range(args.epochs):
     if args.val:
@@ -70,7 +77,6 @@ for epoch in range(args.epochs):
 
             loss.backward()
             optimizer.step()
-            break
         tracker.print_avg_loss_stats()
         tracker.print_IoU_mAP_stats()
 
@@ -92,14 +98,17 @@ for epoch in range(args.epochs):
             tracker.add_loss_stats(loss_stats)
             tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
             loader.desc = tracker.get_running_loss_text()
-    tracker.print_avg_loss_stats()
+    val_loss = tracker.print_avg_loss_stats()
     tracker.print_IoU_mAP_stats()
     print()
-    
+
     if not args.val:
         torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
-
-        # TODO save best
+        if best > val_loss:
+            print(f"NEW BEST MODEL! val_loss={val_loss:.5f}")
+            best = val_loss
+            data ={'model':model.state_dict(), 'val_loss': val_loss}
+            torch.save(data, best_model_path)
 
 if not args.val:
     torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))
