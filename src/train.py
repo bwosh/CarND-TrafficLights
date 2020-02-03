@@ -1,6 +1,6 @@
 import os
 import torch
-#import torch.quantization as quantization
+import torch.quantization as quantization
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -75,6 +75,10 @@ for epoch in range(args.epochs):
 
     print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
     model.eval()
+    if args.quantize:
+        model.qconfig = quantization.get_default_qat_qconfig()
+        model = torch.quantization.prepare_qat(model, inplace=True)
+
     tracker = ResultTracker(args)
     with torch.no_grad():
         loader = tqdm(val_loader, leave=False)
@@ -94,7 +98,15 @@ for epoch in range(args.epochs):
     tracker.print_IoU_mAP_stats()
     print()
     if not args.val:
-        torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
+        save_model = model
+        if args.quantize:
+            save_model = quantization.convert(model)
+        torch.save(save_model.state_dict(),os.path.join(args.output, "last.pth"))
+
+        # TODO save best
 
 if not args.val:
-    torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))
+    save_model = model
+    if args.quantize:
+        save_model = quantization.convert(model)
+    torch.save(save_model.state_dict(),os.path.join(args.output, "final_model.pth"))
