@@ -1,5 +1,6 @@
 import os
 import torch
+#import torch.quantization as quantization
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -9,8 +10,8 @@ from get_coco_images import extract_class_annotations
 from loss import CenterNetLoss
 from models.dla import get_pose_net
 from opts import get_args
+from utils.lrupdater import LrUpdater
 from utils.result import ResultTracker
-
 
 args = get_args()
 
@@ -39,6 +40,7 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 # Training
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 criterion = CenterNetLoss(args)
+lr_updater = LrUpdater(args.lr, optimizer, args.lr_epochs, args.lr_gammas)
 
 if args.val:
     args.epochs = 1
@@ -49,6 +51,7 @@ for epoch in range(args.epochs):
     else:
         print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
         model.train()
+        lr_updater.next(epoch+1)
         tracker = ResultTracker(args)
         loader = tqdm(train_loader, leave=False)
         for batch in loader:

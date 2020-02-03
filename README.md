@@ -27,7 +27,6 @@ Dataset:
 Detector:
 - [x] prepare detector backbone
 - [x] add detector train code
-- [ ] add detector training tensorboard
 Classifier:
 - [ ] prepare annotations for red lights
 - [ ] add training of classifier
@@ -77,8 +76,6 @@ python train.py \
    --input ../data/coco \
    --output ../models \
 ```
-
-You can watch the training progress using tensorboard. (TODO)
 
 # Inference
 
