@@ -1,12 +1,12 @@
 # CarND-TrafficLights
 This is a project of traffic lights detector and classification of there's red light visible.
 
-(TODO) photo
-
 The main purpose of this project is to address Red Litht Detection sub-project of [the capstone project](https://github.com/udacity/CarND-Capstone) of [Self-Driving Car Engineer Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) by [Udacity](https://www.udacity.com/). The intent of this code is to be reaty to be used on CARLA autonomous car:
 
 ![CARLA car](assets/carla.jpg)
 
+Sample detector result:
+![detector result](assets/detector.jpg)
 
 # Project desctiption
 
