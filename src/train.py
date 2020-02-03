@@ -1,6 +1,7 @@
 import os
 import torch
 
+from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -52,63 +53,77 @@ if args.val:
     args.epochs = 1
 
 
-for epoch in range(args.epochs):
-    if args.val:
-        print("ONLY VALIDATION MODE SELECTED.")
-    else:
-        print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
-        model.train()
-        lr_updater.next(epoch+1)
+with SummaryWriter() as writer:
+    for epoch in range(args.epochs):
+        if args.val:
+            print("ONLY VALIDATION MODE SELECTED.")
+        else:
+            print(f"*** TRAIN, epoch {epoch+1}/{args.epochs} ***")
+            model.train()
+            lr_updater.next(epoch+1)
+            tracker = ResultTracker(args)
+            loader = tqdm(train_loader, leave=False)
+            for batch_idx,batch in enumerate(loader):
+                input, heatmaps, widhtandheight, reg_mask, ind = batch
+                input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
+
+                optimizer.zero_grad()
+                output = model(input)
+                output_hm = output[0]['hm']
+                output_wh = output[0]['wh']
+
+                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
+                tracker.add_loss_stats(loss_stats)
+                tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
+                loader.desc = tracker.get_running_loss_text()
+
+                loss.backward()
+                optimizer.step()
+
+                niter = epoch*len(train_loader)+batch_idx
+                writer.add_scalar('Batch/Loss', float(loss), niter)  
+
+            loss = tracker.print_avg_loss_stats()
+            miou, map = tracker.print_IoU_mAP_stats()
+            writer.add_scalar('Train/mAP', map, epoch)
+            writer.add_scalar('Train/mIoU', miou, epoch)
+            writer.add_scalar('Train/Loss', float(loss), epoch)
+
+        print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
+        model.eval()
+
         tracker = ResultTracker(args)
-        loader = tqdm(train_loader, leave=False)
-        for batch in loader:
-            input, heatmaps, widhtandheight, reg_mask, ind = batch
-            input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
+        with torch.no_grad():
+            loader = tqdm(val_loader, leave=False)
+            for batch_idx,batch in enumerate(loader):
+                input, heatmaps, widhtandheight, reg_mask, ind = batch
+                input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
 
-            optimizer.zero_grad()
-            output = model(input)
-            output_hm = output[0]['hm']
-            output_wh = output[0]['wh']
+                output = model(input)
+                output_hm = output[0]['hm']
+                output_wh = output[0]['wh']
 
-            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
-            tracker.add_loss_stats(loss_stats)
-            tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
-            loader.desc = tracker.get_running_loss_text()
+                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
+                tracker.add_loss_stats(loss_stats)
+                tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
+                loader.desc = tracker.get_running_loss_text()
 
-            loss.backward()
-            optimizer.step()
-        tracker.print_avg_loss_stats()
-        tracker.print_IoU_mAP_stats()
+                niter = epoch*len(val_loader)+batch_idx           
 
-    print(f"*** VALIDATION, epoch {epoch+1}/{args.epochs} ***")
-    model.eval()
+        val_loss = tracker.print_avg_loss_stats()
+        miou, map = tracker.print_IoU_mAP_stats()
+        writer.add_scalar('Val/mAP', map, nitepocher)
+        writer.add_scalar('Val/mIoU', miou, epoch)
+        writer.add_scalar('Val/Loss', float(val_loss), epoch)
 
-    tracker = ResultTracker(args)
-    with torch.no_grad():
-        loader = tqdm(val_loader, leave=False)
-        for batch in loader:
-            input, heatmaps, widhtandheight, reg_mask, ind = batch
-            input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
-
-            output = model(input)
-            output_hm = output[0]['hm']
-            output_wh = output[0]['wh']
-
-            loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
-            tracker.add_loss_stats(loss_stats)
-            tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
-            loader.desc = tracker.get_running_loss_text()
-    val_loss = tracker.print_avg_loss_stats()
-    tracker.print_IoU_mAP_stats()
-    print()
+        if not args.val:
+            torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
+            if best > val_loss:
+                print(f"NEW BEST MODEL! val_loss={val_loss:.5f}")
+                best = val_loss
+                data ={'model':model.state_dict(), 'val_loss': val_loss}
+                torch.save(data, best_model_path)
+        print()
 
     if not args.val:
-        torch.save(model.state_dict(),os.path.join(args.output, "last.pth"))
-        if best > val_loss:
-            print(f"NEW BEST MODEL! val_loss={val_loss:.5f}")
-            best = val_loss
-            data ={'model':model.state_dict(), 'val_loss': val_loss}
-            torch.save(data, best_model_path)
-
-if not args.val:
-    torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))
+        torch.save(model.state_dict(),os.path.join(args.output, "final_model.pth"))

@@ -26,7 +26,10 @@ class ResultTracker:
         self.ious += metrics.calculate_IoUs()
         
     def print_IoU_mAP_stats(self):
-        print(f"mAP: {np.mean(self.aps):.5f}, mIoU: {np.mean(self.ious):.5f}")
+        miou = np.mean(self.ious)
+        map = np.mean(self.aps)
+        print(f"mAP: {map:.5f}, mIoU: {miou:.5f}")
+        return miou, map
 
     def print_avg_loss_stats(self):
         for k in self.loss:

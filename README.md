@@ -27,13 +27,15 @@ Dataset:
 Detector:
 - [x] prepare detector backbone
 - [x] add detector train code
+- [x] integrate tensorboardX
+- [ ] (TODO) impleent FocalLoss
 Classifier:
-- [ ] prepare annotations for red lights
-- [ ] add training of classifier
+- [ ] (TODO) prepare annotations for red lights
+- [ ] (TODO) add training of classifier
 E2E detector+classifier:
-- [ ] prepare demo inference code
+- [ ] (TODO) prepare demo inference code
 Finalize:
-- [ ] update requirements file
+- [ ] (TODO) update requirements file
 
 # Implementation details
 
