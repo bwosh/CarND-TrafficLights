@@ -6,3 +6,4 @@ annotations*.zip
 *.pth
 *.jpg
 *.png
+*tfevents*
