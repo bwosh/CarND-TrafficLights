@@ -83,7 +83,7 @@ If you haven't trained model yourself you can download pretrained model and use 
 
 ### 1. Download pretrained model
 
-* Download model from (TODO)
+* Download model from ([512_map3950.pth](https://www.dropbox.com/s/o22v1ew74hesvz9/512_map3950.pth?dl=0))
 * Place pth file in **./model** folder
 
 ### 2. (optional) Check result on validation dataset
@@ -95,6 +95,7 @@ cd src
 python train.py \
    --input ../data/coco \
    --output ../models \
+   --restore ../models/512_map3950.pth \
    --val
 ```
 
@@ -103,8 +104,8 @@ python train.py \
 ```bash
 cd src
 python inference.py \ 
-   --input_path [folder_with_images] \
-   --output_path [output_folder]
+   --folder [folder_with_images] \
+   --model ../models/512_map3950.pth
 ```
 
-And enjoy the photos in output folder.
+And enjoy the photos in the same folder but with '_output.jpg'  suffix.
