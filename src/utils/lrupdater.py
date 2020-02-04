@@ -21,3 +21,4 @@ class LrUpdater():
 
         if change:
             self.set_lr(lr)
+            self.current_lr = lr
