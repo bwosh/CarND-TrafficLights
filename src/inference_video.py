@@ -96,5 +96,5 @@ with skvideo.io.FFmpegReader(args.input_path) as reader:
                 cv2.imwrite(f"{args.save_crops_path}/{crop_id}.png",crop)
                 crop_id += 1
 
-        writer.writeFrame(result_img)
+        writer.writeFrame(result_img[:,:,::-1])
 writer.close()
