@@ -159,7 +159,7 @@ for epoch in range(epochs):  # loop over the dataset multiple times
     net.train()
     losses = []
     accs = []
-    loader = tqdm(trainloader)
+    loader = tqdm(trainloader, leave=False)
     for i, data in enumerate(loader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
@@ -188,7 +188,7 @@ for epoch in range(epochs):  # loop over the dataset multiple times
     with torch.no_grad():
         losses = []
         accs = []
-        loader = tqdm(testloader)
+        loader = tqdm(testloader, leave=False)
         for i, data in enumerate(loader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
@@ -209,9 +209,8 @@ for epoch in range(epochs):  # loop over the dataset multiple times
         if val_acc>best_val_acc:
             best_val_acc = val_acc
             print('NEW BEST FOUND! val acc:', best_val_acc)
+            torch.save(net.state_dict(),"best_cls.pth")
 
 print('Best val acc:', best_val_acc)
 print(f"Inference speed(ms) MEAN:{np.mean(inference_speeds)} STD:{np.std(inference_speeds)} MIN:{np.min(inference_speeds)} MAX:{np.max(inference_speeds)}")
-
-torch.save(net.state_dict(),"cls.pth")
 print('Finished Training')
