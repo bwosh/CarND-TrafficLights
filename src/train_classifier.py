@@ -208,6 +208,7 @@ for epoch in range(epochs):  # loop over the dataset multiple times
         val_acc = np.mean(accs)
         if val_acc>best_val_acc:
             best_val_acc = val_acc
+            print('NEW BEST FOUND! val acc:', best_val_acc)
 
 print('Best val acc:', best_val_acc)
 print(f"Inference speed(ms) MEAN:{np.mean(inference_speeds)} STD:{np.std(inference_speeds)} MIN:{np.min(inference_speeds)} MAX:{np.max(inference_speeds)}")
