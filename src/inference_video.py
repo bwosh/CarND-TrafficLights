@@ -114,7 +114,7 @@ def softmax(x):
 with skvideo.io.FFmpegReader(args.input_path) as reader:
     (numframes, _, _, _) = reader.getShape()
     for frame_id, frame in enumerate(tqdm(reader, total=numframes)):
-        if frame_id<min_frame:
+        if min_frame is not None and frame_id<min_frame:
             continue
 
         ms, bboxes, result_img = get_results(frame, model, args)
