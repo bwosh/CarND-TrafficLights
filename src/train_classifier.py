@@ -12,6 +12,18 @@ from torch.optim.lr_scheduler import StepLR
 from sklearn.model_selection import train_test_split
 import albumentations as a
 import time
+from models.cls_model import ClassifierNet
+
+best_model_path = "../models/best_cls.pth"
+best_val_acc = 0.9534497090606816 
+
+epochs = 110
+start_lr = 0.01
+slr_step = 30
+
+dummy_check = False
+batch_size = 16
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -87,55 +99,13 @@ aug = a.Compose([
 
 dataset_train.aug = aug
 
-class SingleBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel=3, padding=1):
-        super(SingleBlock, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel, padding = padding)
-        self.bn = nn.BatchNorm2d(out_channels)
 
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.bn(x)
-        x = F.relu(x)
-        return x
-
-class Net(nn.Module):
-    def __init__(self):
-
-        super(Net, self).__init__()
-
-        self.filters = [8,16,16,32,64]
-        self.fc_length = 16
-        self.layers = nn.Sequential()
-        prev_channels = 3
-        for f,next_channels in enumerate(self.filters):
-            self.layers.add_module(f"block{f}",SingleBlock(prev_channels, next_channels))
-            prev_channels = next_channels
-
-        self.avg_pool = nn.AdaptiveAvgPool2d((1,1))
-        self.dropout1 = nn.Dropout(0.2)
-        self.fc1 = nn.Linear(self.filters[-1], self.fc_length )
-        self.dropout2 = nn.Dropout(0.3)
-        self.fc2 = nn.Linear(self.fc_length , 2)
-
-    def forward(self, x):
-        for li,layer in enumerate(self.layers):
-            x = layer(x)
-
-        x = self.avg_pool(x)
-        x = torch.flatten(x,1)
-        x = self.dropout1(x)
-        x = F.relu(self.fc1(x))
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        return x
-
-
-dummy_check = False
-batch_size = 16
-epochs = 110
-slr_step = 30
-net = Net()
+net = ClassifierNet()
+print(best_model_path)
+if os.path.isfile(best_model_path):
+    print("Loading model...")
+    state_dict = torch.load(best_model_path)
+    net.load_state_dict(state_dict)
 net=net.cuda()
 
 if dummy_check:
@@ -146,21 +116,18 @@ if dummy_check:
     exit()
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.01)
+optimizer = optim.Adam(net.parameters(), lr=start_lr)
 scheduler = StepLR(optimizer, step_size=slr_step, gamma=0.1)
 trainloader = DataLoader(dataset_train, batch_size=batch_size, num_workers=batch_size, shuffle=True)
 testloader = DataLoader(dataset_test, batch_size=1, num_workers=batch_size, shuffle=True)
 
-
-best_val_acc = 0
 inference_speeds = []
-for epoch in range(epochs):  # loop over the dataset multiple times
-
+loader = tqdm(range(epochs))
+for epoch in loader:  # loop over the dataset multiple times
     net.train()
     losses = []
     accs = []
-    loader = tqdm(trainloader, leave=False)
-    for i, data in enumerate(loader, 0):
+    for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
         inputs, labels = inputs.cuda(), labels.cuda()
@@ -176,20 +143,18 @@ for epoch in range(epochs):  # loop over the dataset multiple times
 
         outputs = outputs.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
-        #print(np.argmax(outputs, axis=1), labels)
         acc = np.mean(np.argmax(outputs, axis=1)==labels)
         accs.append(acc)
         losses.append(float(loss))
 
-        loader.desc = f"E:{epoch+1}/{epochs} L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}"
+        loader.set_description(f"E{epoch+1}/{epochs}  [TRAIN] L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}")
     scheduler.step()
 
     net.eval()
     with torch.no_grad():
         losses = []
         accs = []
-        loader = tqdm(testloader, leave=False)
-        for i, data in enumerate(loader, 0):
+        for i, data in enumerate(testloader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
             inputs, labels = inputs.cuda(), labels.cuda()
@@ -204,12 +169,12 @@ for epoch in range(epochs):  # loop over the dataset multiple times
             accs.append(acc)
             losses.append(float(loss))
 
-            loader.desc = f"Eval:{epoch+1}/{epochs} L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}"
+            loader.set_description(f"E:{epoch+1}/{epochs} [VAL] L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}")
         val_acc = np.mean(accs)
         if val_acc>best_val_acc:
             best_val_acc = val_acc
             print('NEW BEST FOUND! val acc:', best_val_acc)
-            torch.save(net.state_dict(),"best_cls.pth")
+            torch.save(net.state_dict(), best_model_path)
 
 print('Best val acc:', best_val_acc)
 print(f"Inference speed(ms) MEAN:{np.mean(inference_speeds)} STD:{np.std(inference_speeds)} MIN:{np.min(inference_speeds)} MAX:{np.max(inference_speeds)}")
