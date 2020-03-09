@@ -42,9 +42,14 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 if args.val:
     args.epochs = 1
 
+def wh_data_to_mask(output, mask, ind):
+    # TODO replace this dummy implementation
+    mask = np.ones((output.shape[0], 128,128,2), dtype=float)
+    wh = np.ones((output.shape[0], 128,128,2), dtype=float)
+
+    return mask, wh
 
 def generator(loader):
-    print("GEN!")
     for batch_idx,batch in enumerate(loader): 
         input, heatmaps, widhtandheight, reg_mask, ind = batch
 
@@ -54,17 +59,12 @@ def generator(loader):
         reg_mask = reg_mask.numpy() 
         ind = ind.numpy()
 
-        hm = heatmaps
+        mask, wh = wh_data_to_mask(widhtandheight, reg_mask, ind)
 
-        # TODO fix code below - it's only like this to test if trianing is working
-        wh = np.repeat(heatmaps,2, axis=3)
-
-        # TODO prepare proper mask
-        mask = np.ones((input.shape[0], 128,128,2), dtype=float)
-
-        yield [input, mask], [hm, wh]
+        yield [input, mask], [heatmaps, wh]
 
 def reg1_loss(gt, pred):
+    # TODO make it reg1 loss, not MSE
     return K.mean(K.square(gt-pred))
 
 optimizer = SGD(lr=0.1)
