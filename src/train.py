@@ -13,11 +13,12 @@ from utils.result import ResultTracker
 from models.dla_keras import get_dla34_centernet
 from keras.optimizers import SGD
 args = get_args()
+import numpy as np
+
+from keras import backend as K
 
 # Network model preparation
 model = get_dla34_centernet()
-optimizer = SGD(lr=0.1)
-model.compile(optimizer=optimizer, loss='mse')
 # TODO : model loading
 
 print("========================================================")
@@ -38,33 +39,37 @@ val_loader = DataLoader(val_dataset, shuffle=False,
                     batch_size=args.batch_size, num_workers=args.num_workers)
 
 # Training
-best = 1000
-# TODO loading best
-
 if args.val:
     args.epochs = 1
 
-for epoch in range(args.epochs):
-    loader = tqdm(train_loader, leave=False)
-    for batch_idx,batch in enumerate(loader):   
+
+def generator(loader):
+    print("GEN!")
+    for batch_idx,batch in enumerate(loader): 
         input, heatmaps, widhtandheight, reg_mask, ind = batch
 
-        input = input.numpy()
-        heatmaps = heatmaps.numpy()
+        input = input.numpy().transpose(0,2,3,1)
+        heatmaps = heatmaps.numpy().transpose(0,2,3,1)
         widhtandheight = widhtandheight.numpy()
         reg_mask = reg_mask.numpy() 
-        ind = ind.numpy() 
+        ind = ind.numpy()
 
-        print(input.shape)
-        print(heatmaps.shape)
-        print(widhtandheight.shape)
-        print(reg_mask.shape)
-        print(ind.shape)
+        hm = heatmaps
 
-        # TODO: more training here
-        exit()
-        #torch.Size([8, 3, 512, 512])
-        #torch.Size([8, 1, 128, 128])
-        #torch.Size([8, 13, 2])
-        #torch.Size([8, 13])
-        #torch.Size([8, 13])
+        # TODO fix code below - it's only like this to test if trianing is working
+        wh = np.repeat(heatmaps,2, axis=3)
+
+        # TODO prepare proper mask
+        mask = np.ones((input.shape[0], 128,128,2), dtype=float)
+
+        yield [input, mask], [hm, wh]
+
+def reg1_loss(gt, pred):
+    return K.mean(K.square(gt-pred))
+
+optimizer = SGD(lr=0.1)
+model.compile(optimizer=optimizer, loss=['mse',reg1_loss])
+
+steps_per_epoch = len(train_loader) // args.batch_size
+print(f"LEN={len(train_loader)},STEPS={steps_per_epoch}, BS={args.batch_size}")
+model.fit_generator(generator(train_loader), steps_per_epoch = steps_per_epoch, epochs = 2)

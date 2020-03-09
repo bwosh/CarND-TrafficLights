@@ -1,7 +1,7 @@
 from keras.layers import Conv2D, BatchNormalization, Input, MaxPool2D, Conv2DTranspose
 from keras.activations import relu
 from keras.models import Sequential, Model
-from keras.layers.merge import add, concatenate
+from keras.layers.merge import add, concatenate, multiply
 from keras.optimizers import SGD
 
 from keras import backend as K
@@ -301,12 +301,14 @@ class DlaSeg():
     def __init__(self, down_ratio=4, 
                  head_conv=256,
                  input_shape = (512,512,3),  
+                 mask_shape = (128,128,2),  
                  levels=[1, 1, 1, 2, 2, 1],
                  planes=[16, 32, 64, 128, 256, 512],
                  activation_function="relu"):
         # Params
         assert down_ratio in [2, 4, 8, 16]
         self.input = Input(shape = input_shape)
+        self.input_mask = Input(shape = mask_shape)
         self.base = DlaKeras(levels=levels, planes=planes, activation_function=activation_function)
         self.heads = heads={'hm': 1, 'wh': 2}
         
@@ -330,7 +332,7 @@ class DlaSeg():
             layers.append(Conv2D(self.head_conv, kernel_size=(3,3), padding="same", use_bias=True))
             layers.append(ReLU()),
             
-        layers.append(Conv2D(classes, kernel_size=(1,1), strides=(1,1), padding='same', use_bias=True ))
+        layers.append(Conv2D(classes, kernel_size=(1,1), strides=(1,1), padding='same', use_bias=True, name=head ))
 
         return layers
     
@@ -346,8 +348,13 @@ class DlaSeg():
             
         outputs = []
         for head in self.head_layers:
-            outputs.append(self._build_list(x, self.head_layers[head]))
-        return Model(inputs = inputs, outputs=outputs)     
+            layer_output = self._build_list(x, self.head_layers[head])
+            if head == 'wh':
+                layer_output = multiply([self.input_mask , layer_output])
+
+            outputs.append(layer_output)
+            
+        return Model(inputs = [inputs, self.input_mask], outputs=outputs)     
         
 def get_dla34_centernet():
     return DlaSeg().build()
