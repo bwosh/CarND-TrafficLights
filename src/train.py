@@ -1,3 +1,5 @@
+# python train.py --input ../../data/coco --output ../models --batch_size=8 --restore ../models/model_0.11231545358896255.json --lr 5e-7 --val
+
 import os
 import torch
 
@@ -9,6 +11,7 @@ from dataset import SingleClassDataset
 from get_coco_images import extract_class_annotations
 from opts import get_args
 from utils.result import ResultTracker
+from keras.models import model_from_json
 
 from models.dla_keras import get_dla34_centernet
 from keras.optimizers import SGD
@@ -18,9 +21,23 @@ import numpy as np
 from keras import backend as K
 from keras.callbacks.callbacks import LambdaCallback, LearningRateScheduler
 
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.3
+set_session(tf.Session(config=config))
+
 # Network model preparation
-model = get_dla34_centernet()
-# TODO : model loading
+if args.restore != "":
+    print("#### Loading model", args.restore)
+    with open(args.restore, 'r') as json_file:
+        loaded_model_json = json_file.read()
+    model = model_from_json(loaded_model_json)
+    weights_path = args.restore.replace('.json','.h5')
+    print("#### Loading weights", args.restore)
+    model.load_weights(weights_path)
+else:
+    model = get_dla34_centernet()
 
 print("========================================================")
 
@@ -41,7 +58,7 @@ val_loader = DataLoader(val_dataset, shuffle=False,
 
 # Training
 if args.val:
-    args.epochs = 1
+    args.epochs = 0
 
 def wh_data_to_mask(output, reg_mask, ind):
     mask = np.zeros((output.shape[0], 128,128,2), dtype=float)
@@ -60,29 +77,6 @@ def wh_data_to_mask(output, reg_mask, ind):
 
     return mask, wh
 
-# TODO remove previews later
-import cv2
-def save_image(path, array):
-    print(f"Saving {path}: {array.shape}")
-    img = array.copy()
-    if img.shape[2]==3:
-        img = np.clip(img * 255,0,255).astype('uint8')
-        cv2.imwrite(path, img)
-    else:
-        img = np.mean(img, axis=2)
-        img = np.clip(img * 255,0,255).astype('uint8')
-        cv2.imwrite(path, img)
-
-def save_batch_images(idx, input, masks, heatmaps, wh):
-    print("IDX",idx)
-    for n in range(input.shape[0]):
-        filename_base=f"./temp/preview_batch{idx}_n{n}_"
-        save_image(filename_base+"input.png", input[n])
-        save_image(filename_base+"masks.png", masks[n])
-        save_image(filename_base+"heatmaps.png", heatmaps[n])
-        save_image(filename_base+"wh.png", wh[n])
-    exit()
-
 def generator(loader, epochs):
     idx = 0
     for e in range(epochs):
@@ -97,8 +91,6 @@ def generator(loader, epochs):
 
             mask, wh = wh_data_to_mask(widhtandheight, reg_mask, ind)
 
-            # TODO remove: save_batch_images(idx,input, mask, heatmaps, wh) 
-
             idx+=1
             yield [input, mask], [heatmaps, wh]
 
@@ -112,17 +104,12 @@ def weighted_regl1_loss(gt, pred):
 def weighted_mse_loss(gt, pred):
     return K.mean(K.square(gt-pred)) * args.hm_weight
 
-current_lr = args.lr
-optimizer = SGD(lr=current_lr)
-model.compile(optimizer=optimizer, loss=[weighted_mse_loss,weighted_regl1_loss])
-
-
 best_loss = 1000
 def on_epoch_end(epoch,logs):
     global best_loss
     global args
-    print(f"\nLoss:{logs['loss']} Val loss:{logs['val_loss']}")
-    loss = logs['val_loss']
+    print(f"Epoch   \nLoss    : {logs['loss']}\nVal loss: {logs['val_loss']}")
+    loss = logs['val_hm_loss'] + logs['val_multiply_1_loss'] #val_hm_loss #val_multiply_1_loss
     if loss<best_loss:
         model_json = model.to_json()
         with open(os.path.join(args.output, f"model_{loss}.json"), "w") as json_file:
@@ -145,14 +132,30 @@ def schedule(epoch):
 
     return current_lr
 
-callbacks = [LambdaCallback(on_epoch_end=on_epoch_end),
-             LearningRateScheduler(schedule, verbose=1) ]
-model.fit_generator(generator(train_loader, args.epochs), 
-                    validation_data=generator(val_loader, args.epochs),
-                    steps_per_epoch = len(train_loader), 
-                    validation_steps = len(val_loader),
-                    epochs = args.epochs, 
-                    callbacks = callbacks)
+current_lr = args.lr
+optimizer = SGD(lr=current_lr)
+model.compile(optimizer=optimizer, loss=[weighted_mse_loss,weighted_regl1_loss])
+
+if args.epochs > 0:
+    callbacks = [LambdaCallback(on_epoch_end=on_epoch_end),
+                LearningRateScheduler(schedule, verbose=1) ]
+    model.fit_generator(generator(train_loader, args.epochs), 
+                        validation_data=generator(val_loader, args.epochs),
+                        steps_per_epoch = len(train_loader), 
+                        validation_steps = len(val_loader),
+                        epochs = args.epochs, 
+                        callbacks = callbacks,
+                        workers=1, use_multiprocessing=False)
+else:
+    model.evaluate_generator(generator(val_loader, 1),
+                        steps = len(val_loader),
+                        callbacks = [LambdaCallback(on_epoch_end=on_epoch_end)],
+                        workers=1, use_multiprocessing=False)
+
+    for batch in generator(val_loader, 1):
+        results = model.pred(batch)
+        print(type(results))
+        print(results)
 
 # TODO decoder
 # TODO mAP calculation

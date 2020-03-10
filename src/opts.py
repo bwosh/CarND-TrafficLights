@@ -17,9 +17,9 @@ def get_args():
     parser.add_argument("--hm_weight", type=float, default=1)
 
     parser.add_argument("--lr", type=float, default=5e-04)
-    parser.add_argument("--epochs", type=int, default=900)
+    parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--lr_epochs", type=str, default="300,600")
+    parser.add_argument("--lr_epochs", type=str, default="50,100")
     parser.add_argument("--lr_gammas", type=str, default="0.1,0.1")
 
     parser.add_argument("--K", type=int, default=8)
