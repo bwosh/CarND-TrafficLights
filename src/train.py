@@ -149,10 +149,12 @@ if args.epochs > 0:
                         callbacks = callbacks,
                         workers=1, use_multiprocessing=False)
 else:
-    from utils.keras_helpers import save_image
+    print("Starting validation...")
+    from utils.keras_helpers import save_image, calc_map
 
     losses = []
     times = []
+    maps = []
     for bi,batch in enumerate(tqdm(generator(val_loader, 1), total = len(val_loader))):
         input, output = batch
         gt_hm, gt_wh = output
@@ -168,6 +170,7 @@ else:
         losses.append(total_loss)
 
         for i in range(input[0].shape[0]):
+            maps.append( calc_map(hm[i], wh[i], gt_hm[i], gt_wh[i]) )
             save_image(f"temp/{bi}_{i}_img.png", input[0][i], verbose=False)
             save_image(f"temp/{bi}_{i}_hm.png", hm[i], max_div=True, verbose=False)
             save_image(f"temp/{bi}_{i}_wh.png", wh[i], max_div=True, verbose=False)
@@ -175,6 +178,7 @@ else:
         times.append(time_b-time_a)
     print("Mean losses:", np.mean(losses))
     print("Avg batch time losses:", np.mean(times))
+    print("Mean mAP:", np.mean(maps))
 
 # TODO decoder
 # TODO mAP calculation
