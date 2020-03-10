@@ -20,11 +20,13 @@ import numpy as np
 
 from keras import backend as K
 from keras.callbacks.callbacks import LambdaCallback, LearningRateScheduler
+import time
+from tqdm import tqdm
 
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.3
+config.gpu_options.per_process_gpu_memory_fraction = 0.8
 set_session(tf.Session(config=config))
 
 # Network model preparation
@@ -147,15 +149,32 @@ if args.epochs > 0:
                         callbacks = callbacks,
                         workers=1, use_multiprocessing=False)
 else:
-    model.evaluate_generator(generator(val_loader, 1),
-                        steps = len(val_loader),
-                        callbacks = [LambdaCallback(on_epoch_end=on_epoch_end)],
-                        workers=1, use_multiprocessing=False)
+    from utils.keras_helpers import save_image
 
-    for batch in generator(val_loader, 1):
-        results = model.pred(batch)
-        print(type(results))
-        print(results)
+    losses = []
+    times = []
+    for bi,batch in enumerate(tqdm(generator(val_loader, 1), total = len(val_loader))):
+        input, output = batch
+        gt_hm, gt_wh = output
+        time_a = time.time()
+        hm, wh = model.predict([input[0],np.ones_like(input[1])])
+        time_b = time.time()
+
+        gt_wh = gt_wh.astype('float32')
+
+        l_a = K.get_value(weighted_mse_loss(hm, gt_hm))
+        l_b = K.get_value(weighted_regl1_loss(wh, gt_wh))
+        total_loss = l_a + l_b
+        losses.append(total_loss)
+
+        for i in range(input[0].shape[0]):
+            save_image(f"temp/{bi}_{i}_img.png", input[0][i], verbose=False)
+            save_image(f"temp/{bi}_{i}_hm.png", hm[i], max_div=True, verbose=False)
+            save_image(f"temp/{bi}_{i}_wh.png", wh[i], max_div=True, verbose=False)
+
+        times.append(time_b-time_a)
+    print("Mean losses:", np.mean(losses))
+    print("Avg batch time losses:", np.mean(times))
 
 # TODO decoder
 # TODO mAP calculation

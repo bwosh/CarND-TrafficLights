@@ -1,14 +1,17 @@
 import cv2
 import numpy as np
 
-def save_image(path, array):
-    print(f"Saving {path}: {array.shape}")
+def save_image(path, array,max_div=False, verbose=True):
+    if verbose:
+        print(f"Saving {path}: {array.shape}")
     img = array.copy()
     if img.shape[2]==3:
         img = np.clip(img * 255,0,255).astype('uint8')
         cv2.imwrite(path, img)
     else:
         img = np.mean(img, axis=2)
+        eps=1e-4
+        img = img/(np.max(img)+eps)
         img = np.clip(img * 255,0,255).astype('uint8')
         cv2.imwrite(path, img)
 
