@@ -110,15 +110,17 @@ best_loss = 1000
 def on_epoch_end(epoch,logs):
     global best_loss
     global args
-    print(f"Epoch   \nLoss    : {logs['loss']}\nVal loss: {logs['val_loss']}")
-    loss = logs['val_hm_loss'] + logs['val_multiply_1_loss'] #val_hm_loss #val_multiply_1_loss
-    if loss<best_loss:
+    val_loss = logs['val_hm_loss'] + logs['val_multiply_1_loss'] 
+    loss = logs['hm_loss'] + logs['multiply_1_loss'] 
+    print(f"Epoch   :{epoch}\nLoss    : {loss}\nVal loss: {val_loss}")
+    
+    if val_loss<best_loss:
         model_json = model.to_json()
-        with open(os.path.join(args.output, f"model_{loss}.json"), "w") as json_file:
+        with open(os.path.join(args.output, f"model_{val_loss}.json"), "w") as json_file:
             json_file.write(model_json)
-        model.save_weights(os.path.join(args.output, f"model_{loss}.h5"))
-        print("Saved model to disk:",loss)
-        best_loss=loss
+        model.save_weights(os.path.join(args.output, f"model_{val_loss}.h5"))
+        print("Saved model to disk:",val_loss)
+        best_loss=val_loss
 
 def schedule(epoch):
     global current_lr

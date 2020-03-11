@@ -357,4 +357,5 @@ class DlaSeg():
         return Model(inputs = [inputs, self.input_mask], outputs=outputs)     
         
 def get_dla34_centernet():
-    return DlaSeg().build()
+    return DlaSeg(levels=[1, 1, 1, 2, 2, 1],
+                 planes=[4, 8, 16, 32, 64, 128]).build()

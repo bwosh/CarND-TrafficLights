@@ -18,13 +18,6 @@ BatchNorm = nn.BatchNorm2d
 def get_model_url(data='imagenet', name='dla34', hash='ba72cf86'):
     return join('http://dl.yf.io/dla/models', data, '{}-{}.pth'.format(name, hash))
 
-
-def conv3x3(in_planes, out_planes, stride=1):
-    "3x3 convolution with padding"
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
-
-
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, dilation=1):
         super(BasicBlock, self).__init__()
@@ -55,7 +48,6 @@ class BasicBlock(nn.Module):
 
         return out
 
-
 class Root(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, residual):
         super(Root, self).__init__()
@@ -75,7 +67,6 @@ class Root(nn.Module):
         x = self.relu(x)
 
         return x
-
 
 class Tree(nn.Module):
     def __init__(self, levels, block, in_channels, out_channels, stride=1,
@@ -131,7 +122,6 @@ class Tree(nn.Module):
             children.append(x1)
             x = self.tree2(x1, children=children)
         return x
-
 
 class DLA(nn.Module):
     def __init__(self, levels, channels, num_classes=1000,
@@ -244,14 +234,12 @@ def set_bn(bn):
     BatchNorm = bn
     dla.BatchNorm = bn
 
-
 class Identity(nn.Module):
     def __init__(self):
         super(Identity, self).__init__()
 
     def forward(self, x):
         return x
-
 
 def fill_up_weights(up):
     w = up.weight.data
@@ -396,8 +384,6 @@ class DLASeg(nn.Module):
     def forward(self, x):
         x = self.base(x)
         x = self.dla_up(x[self.first_level:])
-        # x = self.fc(x)
-        # y = self.softmax(self.up(x))
         ret = {}
         for head in self.heads:
             ret[head] = self.__getattr__(head)(x)
