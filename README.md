@@ -1,9 +1,19 @@
 # CarND-TrafficLights
 This is a project of traffic lights detector and classification of there's red light visible.
 
-The main purpose of this project is to address Red Litht Detection sub-project of [the capstone project](https://github.com/udacity/CarND-Capstone) of [Self-Driving Car Engineer Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) by [Udacity](https://www.udacity.com/). The intent of this code is to be reaty to be used on CARLA autonomous car:
+The main purpose of this project **was** to address Red Litht Detection sub-project of [the capstone project](https://github.com/udacity/CarND-Capstone) of [Self-Driving Car Engineer Nanodegree](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013) by [Udacity](https://www.udacity.com/). The intent of this code is to be reaty to be used on CARLA autonomous car.
 
-![CARLA car](assets/carla.jpg)
+The traing code can be easily switched to detect other types of objects.  
+Feel free to experiment!
+
+# BUT WAIT!
+
+This is implementation in **pytorch** and there is no easy way to use this model for the Capstone project.  
+
+**Keras** implementation you might find useful is here:  
+[github: bwosh/keras-traffic-lights](https://github.com/bwosh/keras-traffic-lights)
+
+# Results
 
 Sample detector result:  
 ![detector result](assets/detector.jpg)
@@ -19,23 +29,6 @@ Pre-trained model uses "Traffic light" class.
 The code uses CenterNet implementation presented in ["Objects as Points"](https://arxiv.org/pdf/1904.07850.pdf).
 
 Used backbone model is DLA-34 proposed in ["Deep Layer Aggregation"](https://arxiv.org/pdf/1707.06484.pdf).
-
-# Current work status
-Dataset:
-- [x] prepare dataset download code
-- [x] prepare center heatmap and sized tensor dataset object
-Detector:
-- [x] prepare detector backbone
-- [x] add detector train code
-- [x] integrate tensorboardX
-- [ ] (TODO) impleent FocalLoss
-Classifier:
-- [ ] (TODO) prepare annotations for red lights
-- [ ] (TODO) add training of classifier
-E2E detector+classifier:
-- [ ] (TODO) prepare demo inference code
-Finalize:
-- [ ] (TODO) update requirements file
 
 # Implementation details
 
