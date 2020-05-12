@@ -16,7 +16,7 @@ from utils.result import ResultTracker
 args = get_args()
 
 # Network model preparation
-model = get_pose_net(34, heads={'hm': 1, 'wh': 2}, head_conv=-1).cuda()
+model = get_pose_net(34, heads={'hm': 1, 'wh': 2, 'se': 16}, head_conv=-1).cuda()
 if (args.restore !=""):
     print(f"Loading model from {args.restore}")
     state_dict = torch.load(args.restore)
@@ -64,15 +64,16 @@ with SummaryWriter() as writer:
             tracker = ResultTracker(args)
             loader = tqdm(train_loader, leave=False)
             for batch_idx,batch in enumerate(loader):
-                input, heatmaps, widhtandheight, reg_mask, ind = batch
-                input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
+                input, heatmaps, widhtandheight, reg_mask, ind, se = batch
+                input, heatmaps, widhtandheight, reg_mask, ind, se = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda(), se.cuda()
 
                 optimizer.zero_grad()
                 output = model(input)
                 output_hm = output[0]['hm']
                 output_wh = output[0]['wh']
+                output_se = output[0]['se']
 
-                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
+                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind, se, output_se)
                 tracker.add_loss_stats(loss_stats)
                 tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
                 loader.desc = tracker.get_running_loss_text()
@@ -96,14 +97,15 @@ with SummaryWriter() as writer:
         with torch.no_grad():
             loader = tqdm(val_loader, leave=False)
             for batch_idx,batch in enumerate(loader):
-                input, heatmaps, widhtandheight, reg_mask, ind = batch
-                input, heatmaps, widhtandheight, reg_mask, ind = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda()
+                input, heatmaps, widhtandheight, reg_mask, ind, se = batch
+                input, heatmaps, widhtandheight, reg_mask, ind, se = input.cuda(), heatmaps.cuda(), widhtandheight.cuda(), reg_mask.cuda(), ind.cuda(), se.cuda()
 
                 output = model(input)
                 output_hm = output[0]['hm']
                 output_wh = output[0]['wh']
+                output_se = output[0]['se']
 
-                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind)
+                loss, loss_stats = criterion(heatmaps, output_hm, widhtandheight, output_wh, reg_mask, ind, se, output_se)
                 tracker.add_loss_stats(loss_stats)
                 tracker.save_IoU_mAP(ind, reg_mask, output_hm, widhtandheight, output_wh)
                 loader.desc = tracker.get_running_loss_text()

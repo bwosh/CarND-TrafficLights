@@ -2,20 +2,23 @@ import argparse
 import cv2
 import numpy as np
 import os
-import torch
-from torch.utils.data import Dataset, DataLoader
-import torch.optim as optim
-import torch.nn as nn
-import torch.nn.functional as F
 from tqdm import tqdm
 from torch.optim.lr_scheduler import StepLR
 from sklearn.model_selection import train_test_split
 import albumentations as a
 import time
-from models.cls_model import ClassifierNet
+import torch
+from torch.utils.data import Dataset, DataLoader
 
-best_model_path = "../models/best_cls.pth"
-best_val_acc = 0.9534497090606816 
+from threading import Lock
+
+import tensorflow as tf
+
+config = tf.ConfigProto(gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5))
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
+
+best_model_path = "../models/best.h5"
 
 epochs = 110
 start_lr = 0.01
@@ -35,25 +38,21 @@ def get_args():
     args = parser.parse_args()
     return args
 
-args = get_args()
-
-red_folders = args.red_folders.split(',')
-nored_folders = args.nored_folders.split(',')
-
 class RedNoRedDataset(Dataset):
     def __init__(self, size, red_forlder_paths=None, nored_folder_paths=None):
         self.size = size
         self.aug = None
+        self.lock = Lock()
         red_files = []
         nored_files = []
 
         if red_forlder_paths is not None:
-            for path in red_folders:
-                red_files += [path+f for f in list(os.listdir(path)) if not f.startswith('.')]
+            for path in red_forlder_paths:
+                red_files += [os.path.join(path,f) for f in list(os.listdir(path)) if not f.startswith('.')]
 
         if nored_folder_paths is not None:
             for path in nored_folder_paths:
-                nored_files += [path+f for f in list(os.listdir(path)) if not f.startswith('.')]
+                nored_files += [os.path.join(path,f) for f in list(os.listdir(path)) if not f.startswith('.')]
 
         self.files = red_files + nored_files
         self.labels = np.array([1] * len(red_files) + [0] * len(nored_files))
@@ -74,108 +73,132 @@ class RedNoRedDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
+        self.lock.acquire()
         file_path = self.files[index]
-        img = cv2.imread(self.files[index])
-        if self.aug is not None:
-            img = self.aug(image=img)['image']
-        img = cv2.resize(img,(self.size, self.size))
-        label = self.labels[index]
-        img = img/255-0.5
-        img = (img).transpose(2,0,1)
-        img = torch.tensor(img, dtype=torch.float32)
+        try:
+            img = cv2.imread(self.files[index])
+            if self.aug is not None:
+                img = self.aug(image=img)['image']
+            img = cv2.resize(img,(self.size, self.size))
+            #print(img.shape, file_path)
+            label = self.labels[index]
+            img = img/255
+            img = (img).transpose(2,0,1)
+            img = torch.tensor(img, dtype=torch.float32)
+        except:
+            print("ERROR", index, file_path)
+        finally:
+            self.lock.release() 
         return img, label
 
-dataset = RedNoRedDataset( args.input_size, red_folders, nored_folders)
-dataset_train, dataset_test = dataset.split()
+if __name__=='__main__':
 
-aug = a.Compose([
-            a.HorizontalFlip(p=0.5),
-            a.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15,p=0.5),
-            a.RandomBrightness(0.3,p=0.5),
-            a.RandomContrast(0.3,p=0.5),
-            a.GaussNoise(p=0.5),
-            a.Blur(blur_limit=5,p=0.2),
-        ],p=0.95)
+    args = get_args()
 
-dataset_train.aug = aug
+    red_folders = args.red_folders.split(',')
+    nored_folders = args.nored_folders.split(',')
+    dataset = RedNoRedDataset( args.input_size, red_folders, nored_folders)
+    dataset_train, dataset_test = dataset.split()
+
+    aug = a.Compose([
+                a.HorizontalFlip(p=0.5),
+                a.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15,p=0.5),
+                a.RandomBrightness(0.3,p=0.5),
+                a.RandomContrast(0.3,p=0.5),
+                a.GaussNoise(p=0.5),
+                a.Blur(blur_limit=5,p=0.2),
+            ],p=0.95)
+
+    dataset_train.aug = aug
+
+    trainloader = DataLoader(dataset_train, batch_size=8, num_workers=0, shuffle=True)
+    testloader = DataLoader(dataset_test, batch_size=8, num_workers=0, shuffle=True)
 
 
-net = ClassifierNet()
-print(best_model_path)
-if os.path.isfile(best_model_path):
-    print("Loading model...")
-    state_dict = torch.load(best_model_path)
-    net.load_state_dict(state_dict)
-net=net.cuda()
+    from keras.layers import Conv2D, Flatten, Dense, MaxPool2D, BatchNormalization, Activation
+    from keras.models import Sequential, model_from_json, load_model
+    from keras.optimizers import SGD
+    from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+    from keras import backend as K
 
-if dummy_check:
-    print("CHECKING")
-    dummy = torch.zeros((batch_size,3,32,32), dtype=torch.float32)
-    dummy = dummy.cuda()
-    print(net.forward(dummy).shape)
-    exit()
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=7, strides=1, padding='same', input_shape=(32,32,3)))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(MaxPool2D(pool_size=2, strides=2, padding='same'))
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=start_lr)
-scheduler = StepLR(optimizer, step_size=slr_step, gamma=0.1)
-trainloader = DataLoader(dataset_train, batch_size=batch_size, num_workers=batch_size, shuffle=True)
-testloader = DataLoader(dataset_test, batch_size=1, num_workers=batch_size, shuffle=True)
+    model.add(Conv2D(32, kernel_size=3, strides=1, padding='same'))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
 
-inference_speeds = []
-loader = tqdm(range(epochs))
-for epoch in loader:  # loop over the dataset multiple times
-    net.train()
-    losses = []
-    accs = []
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
-        inputs, labels = inputs.cuda(), labels.cuda()
+    model.add(Conv2D(32, kernel_size=3, strides=1, padding='same'))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+    model.add(Flatten())
+    model.add(Dense(4))
+    model.add(Activation('relu'))
+    model.add(Dense(1, activation='sigmoid'))
 
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    print(model.summary())
 
-        outputs = outputs.detach().cpu().numpy()
-        labels = labels.detach().cpu().numpy()
-        acc = np.mean(np.argmax(outputs, axis=1)==labels)
-        accs.append(acc)
-        losses.append(float(loss))
+    #K.set_learning_phase(0)
+    #with open("model.json", 'r') as json_file:
+    #    loaded_model_json = json_file.read()
+    #model = model_from_json(loaded_model_json)
+    #weights_path = "model.h5"
+    #model.load_weights(weights_path)
+    model = load_model('model1.h5')
 
-        loader.set_description(f"E{epoch+1}/{epochs}  [TRAIN] L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}")
-    scheduler.step()
+    optimizer = SGD(lr=0.0001)
+    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['acc'])
 
-    net.eval()
-    with torch.no_grad():
-        losses = []
-        accs = []
-        for i, data in enumerate(testloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-            inputs, labels = inputs.cuda(), labels.cuda()
+    def generator(loader, epochs):
+        for e in range(epochs):
+            for batch_idx,batch in enumerate(loader): 
+                input, clsid = batch
 
-            time_a = time.time()
-            outputs = net(inputs)
-            time_b = time.time()
-            inference_speeds.append(1000*(time_b-time_a))
-            outputs = outputs.detach().cpu().numpy()
-            labels = labels.detach().cpu().numpy()
-            acc = np.mean(np.argmax(outputs, axis=1)==labels)
-            accs.append(acc)
-            losses.append(float(loss))
+                input = input.numpy().transpose(0,2,3,1)
+                clsid = clsid.numpy()
+                yield input, clsid
 
-            loader.set_description(f"E:{epoch+1}/{epochs} [VAL] L:{np.mean(losses):.5f} ACC:{np.mean(accs):.5f}")
-        val_acc = np.mean(accs)
-        if val_acc>best_val_acc:
-            best_val_acc = val_acc
-            print('NEW BEST FOUND! val acc:', best_val_acc)
-            torch.save(net.state_dict(), best_model_path)
+    epochs = 1#10*20
+    callbacks = [ModelCheckpoint("best1.h5", monitor='val_acc', verbose=1, 
+                save_best_only=True, save_weights_only=False, mode='max', period=1),
 
-print('Best val acc:', best_val_acc)
-print(f"Inference speed(ms) MEAN:{np.mean(inference_speeds)} STD:{np.std(inference_speeds)} MIN:{np.min(inference_speeds)} MAX:{np.max(inference_speeds)}")
-print('Finished Training')
+                ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=30, verbose=0, 
+                mode='auto', min_lr=0.000001)]
+    
+    t = tqdm(total=len(trainloader)*epochs)
+    inputs = []
+    labels = []
+    for input, clsid in generator(trainloader,epochs):
+        #print(input.shape, clsid.shape)
+        for b in range(input.shape[0]):
+            inputs.append(input[b])
+            labels.append(clsid[b])
+        t.update()
+    inputs = np.array(inputs)
+    labels = np.array(labels)
+
+    model.fit(inputs, labels, epochs=3, batch_size=8)
+
+    #model.fit_generator(generator(trainloader,epochs), 
+    #                    validation_data=generator(testloader, epochs),
+    #                    steps_per_epoch = len(trainloader), 
+    #                    validation_steps = len(testloader),
+    #                    epochs = epochs, 
+    #                    callbacks = callbacks,
+    #                    workers=0, use_multiprocessing=False, max_queue_size=1)
+    #K.set_learning_phase(0)
+    #x = model.evaluate_generator(generator(testloader, 1), 
+    #    steps=len(testloader), 
+    #    #callbacks=None, 
+    #    max_queue_size=1, 
+    #    workers=0, use_multiprocessing=False)
+    #print("DONE.")
+    model.save("model1.h5")
+
+    #print('Best val acc:', best_val_acc)
+    #print(f"Inference speed(ms) MEAN:{np.mean(inference_speeds)} STD:{np.std(inference_speeds)} MIN:{np.min(inference_speeds)} MAX:{np.max(inference_speeds)}")
+    print('Finished Training')

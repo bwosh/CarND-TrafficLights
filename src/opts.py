@@ -15,6 +15,7 @@ def get_args():
     
     parser.add_argument("--wh_weight", type=float, default=0.1)
     parser.add_argument("--hm_weight", type=float, default=1)
+    parser.add_argument("--se_weight", type=float, default=1)
 
     parser.add_argument("--lr", type=float, default=5e-04)
     parser.add_argument("--epochs", type=int, default=900)
